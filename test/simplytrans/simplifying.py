@@ -403,34 +403,36 @@ class myGPT2Attention(nn.Module):
     ) -> Tuple[Union[torch.Tensor, Tuple[torch.Tensor]], ...]:
         assert encoder_hidden_states is None
         (query, key) = self.qk_attn(hidden_states).split(self.split_size,
-                                                         dim=2)
-        value = self.v_attn(hidden_states)
+                                                         dim=2)  # 使用conv进行实现
+        value = self.v_attn(hidden_states)  # 使用conv进行实现
 
-        query = self._split_heads(query, self.num_heads, self.head_dim)
-        key = self._split_heads(key, self.num_heads, self.head_dim)
-        value = self._split_heads(value, self.num_heads, self.head_dim)
+        query = self._split_heads(query, self.num_heads,
+                                  self.head_dim)  #使用分隔函数生成
+        key = self._split_heads(key, self.num_heads, self.head_dim)  #使用分隔函数生成
+        value = self._split_heads(value, self.num_heads,
+                                  self.head_dim)  #使�分隔函数生成
 
-        if layer_past is not None:
+        if layer_past is not None: # 某个参数，自定义的
             past_key, past_value = layer_past
             key = torch.cat((past_key, key), dim=-2)
             value = torch.cat((past_value, value), dim=-2)
 
-        if use_cache is True:
+        if use_cache is True: # 使用缓存，这个是什么
             present = (key, value)
         else:
             present = None
 
         attn_output, attn_weights = self._attn(query, key, value,
-                                               attention_mask, head_mask)
+                                               attention_mask, head_mask) #使用attn函数输入qkv计算注意力，这个应该是核心
 
         attn_output = self._merge_heads(attn_output, self.num_heads,
-                                        self.head_dim)
+                                        self.head_dim) # 使用合并函数，将张量的维度，进行变换。
 
-        proj_output = self.c_proj(attn_output)
-        proj_output = self.resid_dropout(proj_output)
+        proj_output = self.c_proj(attn_output) # 使用conv也就是mlp进行输出的计算。
+        proj_output = self.resid_dropout(proj_output) #然后使用drop
 
-        outputs = (proj_output, present)
-        if output_attentions:
+        outputs = (proj_output, present) #使用元组的形式输出
+        if output_attentions: #选择输出的形式。
             outputs += (attn_weights, )
 
         return outputs  # a, present, (attentions)
